@@ -2,17 +2,17 @@ package requests
 
 import (
 	"net/http"
-	neturl "net/url"
+	url2 "net/url"
 )
 
 type Client interface {
-	Request(config Config) (Response, error)
-	Get(url string, config Config) (Response, error)
-	Delete(url string, config Config) (Response, error)
-	Head(url string, config Config) (Response, error)
-	Options(url string, config Config) (Response, error)
-	Post(url string, data any, config Config) (Response, error)
-	Put(url string, data any, config Config) (Response, error)
+	Request(config Config) (*Response, error)
+	Get(url string, config ...Config) (*Response, error)
+	Delete(url string, config ...Config) (*Response, error)
+	Head(url string, config ...Config) (*Response, error)
+	Options(url string, config ...Config) (*Response, error)
+	Post(url string, data any, config ...Config) (*Response, error)
+	Put(url string, data any, config ...Config) (*Response, error)
 	Core() *http.Client
 }
 
@@ -20,58 +20,101 @@ type client struct {
 	httpClient *http.Client
 }
 
-func (c *client) Core() *http.Client {
-	return c.httpClient
-}
-
-func (c *client) Request(config Config) (Response, error) {
+func (c *client) Request(config Config) (*Response, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *client) Get(url string, config Config) (Response, error) {
-	if len(config.Query) > 0 {
-		vs := neturl.Values{}
-		for k, _ := range config.Query {
-			vs.Add(k, config.Query[k])
+func (c *client) Get(url string, config ...Config) (*Response, error) {
+	if len(config) > 0 {
+		if config[0].Query != nil {
+			var err error
+			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
+				return nil, err
+			}
 		}
-		url += "?" + vs.Encode()
 	}
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	res, err := c.httpClient.Get(url)
 	if err != nil {
-		return Response{}, err
+		return nil, err
+	}
+	return &Response{Response: res}, nil
+}
+
+func (c *client) Delete(url string, config ...Config) (*Response, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *client) Head(url string, config ...Config) (*Response, error) {
+	if len(config) > 0 {
+		if config[0].Query != nil {
+			var err error
+			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
+				return nil, err
+			}
+		}
 	}
 
+	res, err := c.httpClient.Head(url)
+	if err != nil {
+		return nil, err
+	}
+	return &Response{Response: res}, nil
+}
+
+func (c *client) Options(url string, config ...Config) (*Response, error) {
+	if len(config) > 0 {
+		if config[0].Query != nil {
+			var err error
+			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	req, err := http.NewRequest(http.MethodOptions, url, nil)
+	if err != nil {
+		return nil, err
+	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return Response{}, err
+		return nil, err
+	}
+	return &Response{Response: res}, nil
+}
+
+func (c *client) Post(url string, data any, config ...Config) (*Response, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *client) Put(url string, data any, config ...Config) (*Response, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *client) Core() *http.Client {
+	//TODO implement me
+	panic("implement me")
+}
+
+// autoCompleteQuery 自动补全 url 查询参数
+func (c *client) autoCompleteQuery(url string, query map[string]string) (string, error) {
+	addr, err := url2.Parse(url)
+	if err != nil {
+		return "", err
 	}
 
-	return Response{res}, nil
-}
+	if query == nil {
+		return url, nil
+	}
 
-func (c *client) Delete(url string, config Config) (Response, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *client) Head(url string, config Config) (Response, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *client) Options(url string, config Config) (Response, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *client) Post(url string, data any, config Config) (Response, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *client) Put(url string, data any, config Config) (Response, error) {
-	//TODO implement me
-	panic("implement me")
+	vs := addr.Query()
+	for k, v := range query {
+		vs.Set(k, v)
+	}
+	addr.RawQuery = vs.Encode()
+	return addr.String(), nil
 }
