@@ -24,10 +24,10 @@ func (r *Response) readBody() {
 
 func (r *Response) String() string {
 	r.readBody()
-
 	return string(r.body)
 }
 
 func (r *Response) Unmarshal(v any) error {
+	r.readBody()
 	return json.Unmarshal(r.body, v)
 }

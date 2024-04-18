@@ -86,8 +86,32 @@ func (c *client) Options(url string, config ...Config) (*Response, error) {
 }
 
 func (c *client) Post(url string, data any, config ...Config) (*Response, error) {
-	//TODO implement me
-	panic("implement me")
+	if len(config) > 0 {
+		if config[0].Query != nil {
+			var err error
+			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if data != nil {
+
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	// default content-type
+	req.Header.Set("Content-Type", "application/json")
+	if len(config) > 0 && config[0].Headers != nil {
+		for k, v := range config[0].Headers {
+			req.Header.Set(k, v)
+		}
+	}
+
+	return nil, err
 }
 
 func (c *client) Put(url string, data any, config ...Config) (*Response, error) {
@@ -98,6 +122,10 @@ func (c *client) Put(url string, data any, config ...Config) (*Response, error) 
 func (c *client) Core() *http.Client {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (c *client) request() (*Response, error) {
+	return nil, nil
 }
 
 // autoCompleteQuery 自动补全 url 查询参数
