@@ -5,35 +5,76 @@ import (
 	"testing"
 )
 
-const url = "https://uapis.cn/api/mcinfo?username=T8k_"
+func TestHTTPRequestMethods(t *testing.T) {
+	// Test cases for happy path
+	t.Run("TestRequest", func(t *testing.T) {
+		resp, err := Request(Config{Url: "https://bing.com", Method: "get"})
+		if err != nil {
+			t.Errorf("Request() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Request() returned nil response")
+		}
+	})
 
-func TestGet(t *testing.T) {
-	res, err := Get(url)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(res.StatusCode)
+	t.Run("TestGet", func(t *testing.T) {
+		resp, err := Get("https://bing.com")
+		if err != nil {
+			t.Errorf("Get() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Get() returned nil response")
+		}
+	})
 
-	result := make(map[string]any)
-	err = res.Unmarshal(&result)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(result)
-}
+	t.Run("TestDelete", func(t *testing.T) {
+		resp, err := Delete("https://bing.com")
+		if err != nil {
+			t.Errorf("Delete() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Delete() returned nil response")
+		}
+	})
 
-func TestHead(t *testing.T) {
-	res, err := Head(url)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(res.StatusCode)
-}
+	t.Run("TestHead", func(t *testing.T) {
+		resp, err := Head("https://bing.com")
+		if err != nil {
+			t.Errorf("Head() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Head() returned nil response")
+		}
+	})
 
-func TestOptions(t *testing.T) {
-	res, err := Options(url)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(res.StatusCode)
+	t.Run("TestOptions", func(t *testing.T) {
+		resp, err := Options("https://bing.com")
+		if err != nil {
+			t.Errorf("Options() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Options() returned nil response")
+		}
+	})
+
+	t.Run("TestPost", func(t *testing.T) {
+		resp, err := Post("https://bing.com", "data", Config{})
+		if err != nil {
+			t.Errorf("Post() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Post() returned nil response")
+		}
+		fmt.Println(resp.String())
+	})
+
+	t.Run("TestPut", func(t *testing.T) {
+		resp, err := Put("https://bing.com", "data", Config{})
+		if err != nil {
+			t.Errorf("Put() returned error: %v", err)
+		}
+		if resp == nil {
+			t.Error("Put() returned nil response")
+		}
+	})
 }

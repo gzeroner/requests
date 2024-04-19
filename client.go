@@ -1,8 +1,12 @@
 package requests
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	url2 "net/url"
+	"strings"
 )
 
 type Client interface {
@@ -21,128 +25,113 @@ type client struct {
 }
 
 func (c *client) Request(config Config) (*Response, error) {
-	//TODO implement me
-	panic("implement me")
+	return c.request(config)
 }
 
 func (c *client) Get(url string, config ...Config) (*Response, error) {
-	if len(config) > 0 {
-		if config[0].Query != nil {
-			var err error
-			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	res, err := c.httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	return &Response{Response: res}, nil
+	config = append(config, Config{Method: http.MethodGet, Url: url})
+	conf := mergeConfig(config...)
+	return c.request(conf)
 }
 
 func (c *client) Delete(url string, config ...Config) (*Response, error) {
-	//TODO implement me
-	panic("implement me")
+	config = append(config, Config{Method: http.MethodDelete, Url: url})
+	conf := mergeConfig(config...)
+	return c.request(conf)
 }
 
 func (c *client) Head(url string, config ...Config) (*Response, error) {
-	if len(config) > 0 {
-		if config[0].Query != nil {
-			var err error
-			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	res, err := c.httpClient.Head(url)
-	if err != nil {
-		return nil, err
-	}
-	return &Response{Response: res}, nil
+	config = append(config, Config{Method: http.MethodHead, Url: url})
+	conf := mergeConfig(config...)
+	return c.request(conf)
 }
 
 func (c *client) Options(url string, config ...Config) (*Response, error) {
-	if len(config) > 0 {
-		if config[0].Query != nil {
-			var err error
-			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	req, err := http.NewRequest(http.MethodOptions, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return &Response{Response: res}, nil
+	config = append(config, Config{Method: http.MethodOptions, Url: url})
+	conf := mergeConfig(config...)
+	return c.request(conf)
 }
 
 func (c *client) Post(url string, data any, config ...Config) (*Response, error) {
-	if len(config) > 0 {
-		if config[0].Query != nil {
-			var err error
-			if url, err = c.autoCompleteQuery(url, config[0].Query); err != nil {
-				return nil, err
-			}
+	config = append(config, Config{Method: http.MethodPost, Url: url, Data: data})
+	conf := mergeConfig(config...)
+	return c.request(conf)
+}
+
+func (c *client) Put(url string, data any, config ...Config) (*Response, error) {
+	config = append(config, Config{Method: http.MethodPut, Url: url, Data: data})
+	conf := mergeConfig(config...)
+	return c.request(conf)
+}
+
+func (c *client) Core() *http.Client {
+	return c.httpClient
+}
+
+func (c *client) request(config Config) (*Response, error) {
+	var err error
+
+	// check config
+	if err = config.Check(); err != nil {
+		return nil, err
+	}
+
+	// request address
+	addr := config.Url
+	if config.BaseUrl != "" {
+		addr, err = url2.JoinPath(config.BaseUrl, addr)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	if data != nil {
-
+	// query parameters
+	if config.Query != nil {
+		addr, err = URLWithQuery(addr, config.Query)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	// body
+	body, err := c.handleBody(config)
 	if err != nil {
 		return nil, err
 	}
-	// default content-type
-	req.Header.Set("Content-Type", "application/json")
-	if len(config) > 0 && config[0].Headers != nil {
-		for k, v := range config[0].Headers {
+
+	// create request
+	config.Method = strings.ToUpper(config.Method)
+	req, err := http.NewRequest(config.Method, addr, body)
+	if err != nil {
+		return nil, err
+	}
+
+	// request headers
+	if config.Headers != nil {
+		for k, v := range config.Headers {
 			req.Header.Set(k, v)
 		}
 	}
 
-	return nil, err
-}
-
-func (c *client) Put(url string, data any, config ...Config) (*Response, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *client) Core() *http.Client {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *client) request() (*Response, error) {
-	return nil, nil
-}
-
-// autoCompleteQuery 自动补全 url 查询参数
-func (c *client) autoCompleteQuery(url string, query map[string]string) (string, error) {
-	addr, err := url2.Parse(url)
+	// send request
+	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if query == nil {
-		return url, nil
-	}
+	// response
+	return &Response{Response: res}, nil
+}
 
-	vs := addr.Query()
-	for k, v := range query {
-		vs.Set(k, v)
+func (c *client) handleBody(config Config) (io.Reader, error) {
+	if config.Data == nil {
+		switch config.Data.(type) {
+		case string:
+			return strings.NewReader(config.Data.(string)), nil
+		default:
+			bs, err := json.Marshal(config.Data)
+			if err != nil {
+				return nil, err
+			}
+			return bytes.NewReader(bs), nil
+		}
 	}
-	addr.RawQuery = vs.Encode()
-	return addr.String(), nil
+	return nil, nil
 }
