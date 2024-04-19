@@ -110,6 +110,11 @@ func (c *client) request(config Config) (*Response, error) {
 		}
 	}
 
+	// auth
+	if config.Auth.Username != "" && config.Auth.Password != "" {
+		req.SetBasicAuth(config.Auth.Username, config.Auth.Password)
+	}
+
 	// send request
 	res, err := c.httpClient.Do(req)
 	if err != nil {
